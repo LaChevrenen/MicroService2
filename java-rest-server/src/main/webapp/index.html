@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FlightBook — Réservation de vols</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: system-ui, -apple-system, sans-serif; background: #f0f4f8; color: #1a202c; }
+
+        header {
+            background: #1a365d;
+            color: white;
+            padding: 1.5rem 2rem;
+        }
+        header h1 { font-size: 1.6rem; }
+        header p  { opacity: 0.65; font-size: 0.9rem; margin-top: 0.2rem; }
+
+        main { max-width: 1000px; margin: 2rem auto; padding: 0 1rem; }
+
+        .controls {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        button {
+            background: #2b6cb0;
+            color: white;
+            border: none;
+            padding: 0.65rem 1.5rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: background 0.15s;
+        }
+        button:hover { background: #2c5282; }
+
+        #status { font-size: 0.85rem; color: #718096; }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+            gap: 1rem;
+        }
+
+        .card {
+            background: white;
+            border-radius: 10px;
+            padding: 1.25rem;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+            border-left: 4px solid #2b6cb0;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.85rem;
+        }
+        .compagnie { font-weight: 700; font-size: 1rem; color: #1a365d; }
+        .numero {
+            font-size: 0.8rem;
+            background: #ebf4ff;
+            color: #2b6cb0;
+            padding: 0.2rem 0.55rem;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+
+        .card-info {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+        .info-item label {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: #a0aec0;
+            display: block;
+            margin-bottom: 0.1rem;
+        }
+        .info-item span { font-size: 0.9rem; font-weight: 500; }
+
+        .card-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .prix { font-size: 1.3rem; font-weight: 700; color: #276749; }
+        .btn-reserver {
+            background: #276749;
+            font-size: 0.82rem;
+            padding: 0.45rem 0.9rem;
+        }
+        .btn-reserver:hover { background: #22543d; }
+
+        .message { text-align: center; padding: 2.5rem; color: #718096; }
+        .error { color: #c53030; }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>FlightBook</h1>
+    <p>Service de réservation de vols</p>
+</header>
+
+<main>
+    <div class="controls">
+        <button onclick="chargerVols()">Charger les vols disponibles</button>
+        <span id="status"></span>
+    </div>
+    <div id="container">
+        <p class="message">Cliquez sur le bouton pour afficher les vols disponibles.</p>
+    </div>
+</main>
+
+<script>
+    async function chargerVols() {
+        const container = document.getElementById('container');
+        const status    = document.getElementById('status');
+
+        status.textContent = 'Chargement...';
+        container.innerHTML = '';
+
+        try {
+            const res = await fetch('api/vols');
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            const vols = await res.json();
+
+            status.textContent = vols.length + ' vol(s) trouvé(s)';
+            container.innerHTML = '<div class="grid">' + vols.map(volCard).join('') + '</div>';
+        } catch (e) {
+            status.textContent = '';
+            container.innerHTML = '<p class="message error">Erreur : ' + e.message + '</p>';
+        }
+    }
+
+    function volCard(vol) {
+        return `
+        <div class="card">
+            <div class="card-header">
+                <span class="compagnie">${vol.compagnie}</span>
+                <span class="numero">${vol.numero}</span>
+            </div>
+            <div class="card-info">
+                <div class="info-item">
+                    <label>Date</label>
+                    <span>${formatDate(vol.date)}</span>
+                </div>
+                <div class="info-item">
+                    <label>Place</label>
+                    <span>${vol.place}</span>
+                </div>
+            </div>
+            <div class="card-footer">
+                <span class="prix">${vol.prix.toFixed(2)} €</span>
+                <button class="btn-reserver" onclick="reserver(${vol.id}, '${vol.compagnie}', '${vol.numero}')">
+                    Réserver
+                </button>
+            </div>
+        </div>`;
+    }
+
+    function formatDate(dateStr) {
+        return new Date(dateStr).toLocaleDateString('fr-FR', {
+            day: '2-digit', month: 'short', year: 'numeric'
+        });
+    }
+
+    function reserver(id, compagnie, numero) {
+        const ref = 'RES-' + Date.now().toString(36).toUpperCase();
+        alert('Réservation confirmée !\n\nVol : ' + compagnie + ' ' + numero + '\nRéférence : ' + ref);
+    }
+</script>
+
+</body>
+</html>
