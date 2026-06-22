@@ -7,6 +7,26 @@
 
     <absolute-ordering/>
 
+    <!-- Étape 3b : servlet de login OAuth — redirige vers Google -->
+    <servlet>
+        <servlet-name>OAuthLogin</servlet-name>
+        <servlet-class>infres.ws.rest.oauth.OAuthLoginServlet</servlet-class>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>OAuthLogin</servlet-name>
+        <url-pattern>/login</url-pattern>
+    </servlet-mapping>
+
+    <!-- Étape 3b : servlet de callback — reçoit le code et récupère le profil -->
+    <servlet>
+        <servlet-name>OAuthCallback</servlet-name>
+        <servlet-class>infres.ws.rest.oauth.OAuthCallbackServlet</servlet-class>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>OAuthCallback</servlet-name>
+        <url-pattern>/oauth2callback</url-pattern>
+    </servlet-mapping>
+
     <servlet>
         <servlet-name>Jersey</servlet-name>
         <servlet-class>org.glassfish.jersey.servlet.ServletContainer</servlet-class>

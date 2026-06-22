@@ -1,5 +1,25 @@
-// ─── Init : charge les compagnies pour le filtre (Route 3) ───────────────────
+// ─── Init ─────────────────────────────────────────────────────────────────────
 window.addEventListener('load', async () => {
+    chargerProfil();     // OAuth : tente d'afficher le profil Google
+    chargerCompagnies(); // Route 3 : alimente le filtre
+});
+
+// ─── OAuth : affiche le profil si connecté, sinon bouton login ────────────────
+async function chargerProfil() {
+    try {
+        const res = await fetch('api/profile');
+        if (!res.ok) return; // non connecté, le bouton login reste affiché
+        const p = await res.json();
+        document.getElementById('userZone').innerHTML =
+            '<div class="user-info">' +
+            (p.picture ? '<img src="' + p.picture + '" alt="avatar">' : '') +
+            '<span>Bonjour, ' + (p.name || p.email) + '</span>' +
+            '</div>';
+    } catch (_) {}
+}
+
+// ─── Route 3 : charge les compagnies pour le filtre ───────────────────────────
+async function chargerCompagnies() {
     try {
         const res = await fetch('api/compagnies');
         if (!res.ok) throw new Error();
@@ -13,7 +33,7 @@ window.addEventListener('load', async () => {
         });
         sel.disabled = false;
     } catch (_) {}
-});
+}
 
 // ─── Route 1 : GET /api/vols ──────────────────────────────────────────────────
 async function chargerTousLesVols() {
