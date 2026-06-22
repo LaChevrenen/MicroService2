@@ -63,6 +63,13 @@
             <artifactId>google-http-client-jackson2</artifactId>
             <version>1.43.3</version>
         </dependency>
+
+        <!-- Validation JWT (Keycloak bearer-only — étape 4) -->
+        <dependency>
+            <groupId>com.nimbusds</groupId>
+            <artifactId>nimbus-jose-jwt</artifactId>
+            <version>9.40</version>
+        </dependency>
     </dependencies>
 
     <build>
