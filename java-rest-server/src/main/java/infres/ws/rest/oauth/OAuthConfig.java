@@ -21,9 +21,15 @@ public class OAuthConfig {
         Properties p = new Properties();
         try (InputStream in = OAuthConfig.class.getClassLoader()
                 .getResourceAsStream("oauth.properties")) {
-            if (in != null) p.load(in);
+            if (in == null) {
+                throw new RuntimeException(
+                    "Fichier oauth.properties introuvable dans src/main/resources/. " +
+                    "Créez-le avec google.client.id, google.client.secret et google.callback.url."
+                );
+            }
+            p.load(in);
         } catch (IOException e) {
-            throw new RuntimeException("oauth.properties introuvable", e);
+            throw new RuntimeException("Erreur lecture oauth.properties", e);
         }
         return p;
     }
