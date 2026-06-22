@@ -31,7 +31,7 @@ public class KeycloakAuthFilter implements ContainerRequestFilter {
     public void filter(ContainerRequestContext ctx) throws IOException {
         String auth = ctx.getHeaderString(HttpHeaders.AUTHORIZATION);
         if (auth == null || !auth.startsWith("Bearer ")) {
-            reject(ctx, 401);
+            reject(ctx, 403);
             return;
         }
         try {
