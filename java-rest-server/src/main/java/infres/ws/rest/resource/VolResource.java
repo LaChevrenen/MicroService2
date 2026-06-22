@@ -19,11 +19,13 @@ public class VolResource {
         new Vol(5, "KLM",        "KL1010", "14E", 215.75, "2026-08-01")
     );
 
+    // Route 1 : GET /api/vols  → liste tous les vols
     @GET
     public List<Vol> getAll() {
         return VOLS;
     }
 
+    // Route 2 : GET /api/vols/{id}  → un vol par son id
     @GET
     @Path("/{id}")
     public Response getById(@PathParam("id") int id) {
