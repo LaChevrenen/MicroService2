@@ -21,7 +21,7 @@ function afficherProfil() {
     document.getElementById('userZone').innerHTML =
         '<div class="user-info">' +
         '<span>Bonjour, ' + (p.name || p.preferred_username) + '</span>' +
-        '<button class="btn-login" onclick="keycloak.logout()">Déconnexion</button>' +
+        '<button class="btn-login" onclick="keycloakLogout()">Déconnexion</button>' +
         '</div>';
 }
 
@@ -183,3 +183,4 @@ window.chargerTousLesVols = chargerTousLesVols;
 window.filtrerParCompagnie = filtrerParCompagnie;
 window.voirDetail = voirDetail;
 window.reserver = reserver;
+window.keycloakLogout = () => keycloak.logout();
