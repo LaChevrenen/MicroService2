@@ -20,8 +20,10 @@ import java.util.Date;
 @Priority(Priorities.AUTHENTICATION)
 public class KeycloakAuthFilter implements ContainerRequestFilter {
 
-    static final String JWKS_URL  = "http://localhost:8180/realms/flightbook/protocol/openid-connect/certs";
-    static final String ISSUER    = "http://localhost:8180/realms/flightbook";
+    static final String JWKS_URL = System.getenv().getOrDefault("KEYCLOAK_JWKS_URL",
+        "http://localhost:8180/realms/flightbook/protocol/openid-connect/certs");
+    static final String ISSUER = System.getenv().getOrDefault("KEYCLOAK_ISSUER",
+        "http://localhost:8180/realms/flightbook");
     private static final long     TTL_MS = 10 * 60_000L;
 
     private static JWKSet cachedJwks;
