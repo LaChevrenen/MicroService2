@@ -75,44 +75,28 @@ Contrat dans `openapi.yaml`, à visualiser sur https://editor.swagger.io. Doc HT
 
 ## Déploiement Kubernetes (k3s)
 
-Suite du TP — déploiement sur un cluster k3s local via WSL2.
+### 1. Installer k3s
 
-### 1. Installer k3s dans WSL2
-
-Ajouter dans `C:\Users\<user>\.wslconfig` :
-```ini
-[wsl2]
-networkingMode=mirrored
-```
-
-```powershell
-wsl.exe --update
-wsl --shutdown
-```
-
-Puis dans WSL :
 ```bash
 sudo su -
 curl -sfL https://get.k3s.io | K3S_KUBECONFIG_MODE="644" sh -
-systemctl disable k3s   # désactiver le démarrage auto
+systemctl disable k3s
 exit
 
 export KUBECONFIG="/etc/rancher/k3s/k3s.yaml"
-kubectl get node        # doit afficher Ready
+kubectl get node   # Ready
 ```
 
-> k3s est désactivé au boot. Pour le relancer après redémarrage : `sudo systemctl start k3s`
-
-### 2. Registry privée dans le cluster
+### 2. Registry privée
 
 ```bash
-# DNS local
-sudo su -c 'echo "$(hostname -I | awk '"'"'{print $1}'"'"') registry.infres.fr" >> /etc/hosts'
+# Résolution DNS locale
+sudo sh -c 'echo "$(hostname -I | awk '"'"'{print $1}'"'"') registry.infres.fr" >> /etc/hosts'
 
-# Déployer la registry
+# Déployer la registry dans le cluster
 kubectl apply -f k8s/DockerRegistry.yaml
 
-# Autoriser k3s à puller en HTTP (en tant que root)
+# Autoriser k3s à puller en HTTP
 sudo su -
 cat <<EOF >/etc/rancher/k3s/registries.yaml
 mirrors:
@@ -122,59 +106,54 @@ mirrors:
 EOF
 systemctl restart k3s
 exit
-```
 
-Dans Docker Desktop → Settings → Docker Engine, ajouter :
-```json
-"insecure-registries": ["registry.infres.fr"]
-```
+# Autoriser Docker à pusher en HTTP
+sudo sh -c 'echo '"'"'{"insecure-registries":["registry.infres.fr"]}'"'"' > /etc/docker/daemon.json'
+sudo systemctl restart docker
 
-Vérifier que la registry répond :
-```bash
 wget -q -O- http://registry.infres.fr/v2/_catalog   # {"repositories":[]}
 ```
 
 ### 3. Build et push
 
-> `docker-compose push` ne fonctionne pas depuis Docker Desktop (bug HTTPS/BuildKit). On utilise `crane` à la place.
-
 ```bash
-# Télécharger crane
-curl -LO "https://github.com/google/go-containerregistry/releases/latest/download/go-containerregistry_Linux_x86_64.tar.gz"
-tar -xzf go-containerregistry_Linux_x86_64.tar.gz crane
-
-# Build depuis WSL
 docker-compose build
+docker-compose push
 
-# Push via crane (HTTP)
-docker save registry.infres.fr/flightbook:latest -o flightbook.tar
-./crane push --insecure flightbook.tar registry.infres.fr/flightbook:latest
-
-# Vérifier
 wget -q -O- http://registry.infres.fr/v2/_catalog   # {"repositories":["flightbook"]}
 ```
 
 ### 4. Déployer sur k3s
 
 ```bash
-# DNS local pour l'app
-sudo su -c 'echo "$(hostname -I | awk '"'"'{print $1}'"'"') flightbook.infres.fr" >> /etc/hosts'
+sudo sh -c 'echo "$(hostname -I | awk '"'"'{print $1}'"'"') flightbook.infres.fr" >> /etc/hosts'
 
 kubectl apply -f k8s/flightbook.yaml
 kubectl get pods -w   # attendre 2x Running
 
-# Tester
-curl http://flightbook.infres.fr/
+curl http://flightbook.infres.fr/   # retourne le HTML de l'app
 ```
 
-### 5. HPA (autoscaling)
+### 5. HPA — autoscaling
 
 ```bash
 kubectl apply -f k8s/flightbook-hpa.yaml
-kubectl get hpa -w   # attendre que cpu/memory affichent des valeurs (≈ 90s)
+kubectl get hpa -w
 ```
 
-Seuils : scale up si CPU > 80% ou RAM > 80%, entre 2 et 4 replicas.
+Stress test pour valider le scaling :
+```bash
+# Terminal 1 — watch
+kubectl get hpa -w
+
+# Terminal 2 — charge CPU sur tous les pods
+for pod in $(kubectl get pod -l app=flightbook -o name); do
+  kubectl exec $pod -- /bin/sh -c "while true; do cat /dev/urandom | md5sum; done" &
+done
+wait
+```
+
+Résultat observé : CPU 2% → 501% → scale up **2 → 4 replicas** en ~30s. Ctrl+C pour arrêter.
 
 ## Comptes
 
