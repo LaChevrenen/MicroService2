@@ -9,7 +9,6 @@ services:
       KC_BOOTSTRAP_ADMIN_PASSWORD: admin
     volumes:
       - ./keycloak-realm-export.json:/opt/keycloak/data/import/flightbook-realm.json
-      - keycloak_data:/opt/keycloak/data/h2
     command: start-dev --import-realm
 
   flightbook:
@@ -22,6 +21,3 @@ services:
       KEYCLOAK_ISSUER: http://localhost:8180/realms/flightbook
     depends_on:
       - keycloak
-
-volumes:
-  keycloak_data:
