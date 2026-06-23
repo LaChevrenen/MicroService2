@@ -71,6 +71,79 @@ Token récupérable via curl ou DevTools (onglet Network). À coller sur https:/
 **7 — Contrat OpenAPI**
 Contrat dans `openapi.yaml`, à visualiser sur https://editor.swagger.io. Doc HTML et client JS générés dans `generated/` via `openapitools/openapi-generator-cli`.
 
+---
+
+## Déploiement Kubernetes (k3s)
+
+Suite du TP — déploiement sur un cluster k3s local via WSL2.
+
+### 1. Installer k3s dans WSL2
+
+```powershell
+# Windows — mettre à jour WSL2
+wsl.exe --update
+```
+
+Ajouter dans `C:\Users\<user>\.wslconfig` :
+```ini
+[wsl2]
+networkingMode=mirrored
+```
+
+Redémarrer WSL (`wsl --shutdown`), puis dans WSL :
+
+```bash
+sudo su -
+curl -sfL https://get.k3s.io | K3S_KUBECONFIG_MODE="644" sh -
+systemctl disable k3s   # ne pas démarrer au boot
+export KUBECONFIG="/etc/rancher/k3s/k3s.yaml"
+kubectl get node        # doit afficher Ready
+```
+
+### 2. Registry privée
+
+```bash
+# Faire pointer registry.infres.fr vers l'IP locale
+sudo su -
+echo "$(hostname -I | awk '{print $1}') registry.infres.fr" >> /etc/hosts
+
+# Déployer la registry dans le cluster
+kubectl apply -f k8s/DockerRegistry.yaml
+
+# Autoriser k3s à puller depuis cette registry (HTTP)
+cat <<EOF >/etc/rancher/k3s/registries.yaml
+mirrors:
+  registry.infres.fr:
+    endpoint:
+      - "http://registry.infres.fr"
+EOF
+systemctl restart k3s
+```
+
+Configurer Docker Engine (dans `/etc/docker/daemon.json`) :
+```json
+{
+  "insecure-registries": ["registry.infres.fr"]
+}
+```
+```bash
+systemctl restart docker
+```
+
+### 3. Build et push
+
+```bash
+docker-compose build
+docker-compose push
+# Vérifier : wget http://registry.infres.fr/v2/flightbook/tags/list
+```
+
+### 4. Déployer sur k3s
+
+```bash
+kubectl apply -f k8s/flightbook.yaml
+```
+
 ## Comptes
 
 | | Mot de passe | |

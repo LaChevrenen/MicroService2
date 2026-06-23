@@ -13,6 +13,7 @@ services:
 
   flightbook:
     build: ./java-rest-server
+    image: registry.infres.fr/flightbook
     container_name: flightbook-app
     ports:
       - "8080:8080"
