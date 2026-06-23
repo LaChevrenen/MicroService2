@@ -74,6 +74,15 @@ Authentification Google via Authorization Code Flow. Les credentials sont dans `
 **Étape 5 — Authentification SPA via Keycloak**
 Le frontend utilise le SDK JS Keycloak (`login-required`). Toutes les requêtes API incluent automatiquement le Bearer token. Le profil utilisateur est extrait directement du JWT.
 
+**Étape 6 — Analyse du JWT**
+Le token JWT généré par Keycloak est analysable sur https://jwt.io. Il est composé de 3 parties :
+
+- **Header** : algorithme `RS256`, identifiant de la clé (`kid`) utilisée pour la signature
+- **Payload** : les claims — `iss` (qui a émis le token), `sub` (ID unique de l'user), `azp` (le client), `name`, `email`, `realm_access` (rôles), `exp` (expiration)
+- **Signature** : signée avec la clé privée RSA de Keycloak, vérifiable avec la clé publique exposée sur `/realms/flightbook/protocol/openid-connect/certs`
+
+C'est cette vérification de signature que fait `KeycloakAuthFilter` à chaque appel API.
+
 ## Comptes
 
 | Utilisateur | Mot de passe | Rôle |
