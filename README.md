@@ -75,6 +75,28 @@ Contrat dans `openapi.yaml`, à visualiser sur https://editor.swagger.io. Doc HT
 
 ## Déploiement Kubernetes (k3s)
 
+### Pièges courants
+
+**`kubectl` connection refused** — `KUBECONFIG` n'est pas exporté dans le terminal courant. À mettre dans chaque terminal, ou une fois pour toutes dans `~/.bashrc` :
+```bash
+echo 'export KUBECONFIG="/etc/rancher/k3s/k3s.yaml"' >> ~/.bashrc
+source ~/.bashrc
+```
+
+**Fedora/RHEL — pods injoignables (502)** — `firewalld` bloque le réseau entre pods. Ajouter les interfaces k3s à la zone trusted :
+```bash
+sudo firewall-cmd --permanent --zone=trusted --add-interface=cni0
+sudo firewall-cmd --permanent --zone=trusted --add-interface=flannel.1
+sudo firewall-cmd --reload
+```
+
+**Traefik démarre avant que k3s soit prêt** — Si Traefik a des erreurs RBAC au démarrage, redémarrer le déploiement suffit :
+```bash
+kubectl rollout restart deployment/traefik -n kube-system
+```
+
+---
+
 ### 1. Installer k3s
 
 ```bash
@@ -88,13 +110,6 @@ kubectl get node   # Ready
 ```
 
 ### 2. Registry privée
-
-> **Fedora/RHEL** : `firewalld` bloque le trafic entre pods par défaut. À faire avant de déployer :
-> ```bash
-> sudo firewall-cmd --permanent --zone=trusted --add-interface=cni0
-> sudo firewall-cmd --permanent --zone=trusted --add-interface=flannel.1
-> sudo firewall-cmd --reload
-> ```
 
 ```bash
 # Résolution DNS locale
@@ -124,8 +139,8 @@ wget -q -O- http://registry.infres.fr/v2/_catalog   # {"repositories":[]}
 ### 3. Build et push
 
 ```bash
-docker-compose build
-docker-compose push
+docker compose build
+docker compose push
 
 wget -q -O- http://registry.infres.fr/v2/_catalog   # {"repositories":["flightbook"]}
 ```
