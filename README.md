@@ -59,7 +59,14 @@ Authorization Code Flow via les servlets `OAuthLoginServlet` / `OAuthCallbackSer
 SDK JS Keycloak en mode `login-required`. Le token est attaché à chaque appel API, le profil vient du JWT.
 
 **6 — Analyse JWT**
-Token récupérable via curl ou DevTools. Collé sur https://jwt.io on voit : algo RS256, sub (ID user), iss, email, rôles, expiration. C'est cette signature que `KeycloakAuthFilter` vérifie côté backend.
+Token récupérable via curl ou DevTools (onglet Network). À coller sur https://jwt.io.
+
+3 parties :
+- **Header** : algo de signature (`RS256`), `kid` = identifiant du certificat public utilisé pour signer
+- **Payload** : les claims — `iss` (Keycloak, vérifié côté API), `sub` (ID opaque de l'user), `typ: Bearer`, `azp` (le client), `realm_access` (rôles du royaume), `iat`/`exp` (émission/expiration)
+- **Signature** : vérifiable avec la clé publique Keycloak (`/realms/flightbook/protocol/openid-connect/certs`)
+
+`KeycloakAuthFilter` vérifie la signature + l'`iss` + l'expiration à chaque appel. Si l'un des trois est invalide → 403.
 
 **7 — Contrat OpenAPI**
 Contrat dans `openapi.yaml`, à visualiser sur https://editor.swagger.io. Doc HTML et client JS générés dans `generated/` via `openapitools/openapi-generator-cli`.
