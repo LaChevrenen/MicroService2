@@ -1,4 +1,5 @@
 // ─── Keycloak ─────────────────────────────────────────────────────────────────
+import Keycloak from './keycloak.js';
 const keycloak = new Keycloak('keycloak.json');
 
 window.addEventListener('load', () => {
@@ -176,3 +177,9 @@ function afficherToast(msg) {
     t.classList.add('show');
     setTimeout(() => t.classList.remove('show'), 3500);
 }
+
+// Exposition globale nécessaire pour les onclick dans les cartes générées dynamiquement
+window.chargerTousLesVols = chargerTousLesVols;
+window.filtrerParCompagnie = filtrerParCompagnie;
+window.voirDetail = voirDetail;
+window.reserver = reserver;
