@@ -66,22 +66,16 @@ curl -X POST http://localhost:8180/realms/flightbook/protocol/openid-connect/tok
 API JAX-RS avec 5 routes (vols, compagnies, réservations). SPA en 3 fichiers (HTML/CSS/JS) qui consomme l'API.
 
 **Étape 3 — OAuth 2.1 Google**
-Authentification Google via Authorization Code Flow. Les credentials sont dans `oauth.properties` (gitignored — ne pas committer).
+Authentification Google via Authorization Code Flow (servlets `OAuthLoginServlet` / `OAuthCallbackServlet`). Credentials dans `oauth.properties` (gitignored). Ces endpoints (`/login`, `/oauth2callback`) sont toujours dans le code mais remplacés côté frontend par Keycloak à l'étape 5.
 
 **Étape 4 — Protection de l'API par Keycloak**
-`KeycloakAuthFilter` (JAX-RS `@Provider`) valide le JWT sur chaque requête via le endpoint JWKS de Keycloak. Utilise `nimbus-jose-jwt` plutôt que l'adapter Keycloak officiel (qui est déprécié).
+`KeycloakAuthFilter` intercepte tous les appels `/api/*` et valide le JWT via le endpoint JWKS de Keycloak. On utilise `nimbus-jose-jwt` à la place de l'adapter officiel Keycloak (déprécié depuis Keycloak 17+).
 
 **Étape 5 — Authentification SPA via Keycloak**
-Le frontend utilise le SDK JS Keycloak (`login-required`). Toutes les requêtes API incluent automatiquement le Bearer token. Le profil utilisateur est extrait directement du JWT.
+Le frontend utilise le SDK JS Keycloak en mode `login-required` : si pas de session, redirection vers Keycloak. Le token est ensuite attaché automatiquement à chaque appel API. Le profil (nom, email) vient directement du JWT décodé, pas d'un appel serveur.
 
 **Étape 6 — Analyse du JWT**
-Le token JWT généré par Keycloak est analysable sur https://jwt.io. Il est composé de 3 parties :
-
-- **Header** : algorithme `RS256`, identifiant de la clé (`kid`) utilisée pour la signature
-- **Payload** : les claims — `iss` (qui a émis le token), `sub` (ID unique de l'user), `azp` (le client), `name`, `email`, `realm_access` (rôles), `exp` (expiration)
-- **Signature** : signée avec la clé privée RSA de Keycloak, vérifiable avec la clé publique exposée sur `/realms/flightbook/protocol/openid-connect/certs`
-
-C'est cette vérification de signature que fait `KeycloakAuthFilter` à chaque appel API.
+Token récupérable via curl ou les DevTools du navigateur (onglet Network). À coller sur https://jwt.io pour voir le header (algo RS256 + kid), le payload (sub, iss, email, rôles, expiration) et vérifier la signature avec la clé publique Keycloak.
 
 **Étape 7 — Contrat OpenAPI**
 Le contrat est dans `openapi.yaml`. Pour le visualiser, copie le contenu sur https://editor.swagger.io.

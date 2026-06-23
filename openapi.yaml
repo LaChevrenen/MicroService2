@@ -153,12 +153,14 @@ paths:
             type: integer
           example: 1
       responses:
-        '200':
+        '201':
           description: Réservation confirmée
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Reservation'
+        '400':
+          description: volId manquant ou invalide
         '403':
           description: Token manquant ou invalide
         '404':
