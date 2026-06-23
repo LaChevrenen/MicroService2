@@ -89,6 +89,13 @@ kubectl get node   # Ready
 
 ### 2. Registry privée
 
+> **Fedora/RHEL** : `firewalld` bloque le trafic entre pods par défaut. À faire avant de déployer :
+> ```bash
+> sudo firewall-cmd --permanent --zone=trusted --add-interface=cni0
+> sudo firewall-cmd --permanent --zone=trusted --add-interface=flannel.1
+> sudo firewall-cmd --reload
+> ```
+
 ```bash
 # Résolution DNS locale
 sudo sh -c 'echo "$(hostname -I | awk '"'"'{print $1}'"'"') registry.infres.fr" >> /etc/hosts'
