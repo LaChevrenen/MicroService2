@@ -83,6 +83,22 @@ Le token JWT généré par Keycloak est analysable sur https://jwt.io. Il est co
 
 C'est cette vérification de signature que fait `KeycloakAuthFilter` à chaque appel API.
 
+**Étape 7 — Contrat OpenAPI**
+Le contrat est dans `openapi.yaml`. Pour le visualiser, copie le contenu sur https://editor.swagger.io.
+
+Générer la doc et les clients (nécessite Docker) :
+```bash
+# Documentation HTML → generated/html-docs/index.html
+docker run --rm -v "${PWD}:/local" openapitools/openapi-generator-cli generate \
+  -i /local/openapi.yaml -g html2 -o /local/generated/html-docs
+
+# Client JavaScript → generated/client-js/
+docker run --rm -v "${PWD}:/local" openapitools/openapi-generator-cli generate \
+  -i /local/openapi.yaml -g javascript -o /local/generated/client-js
+```
+
+Les fichiers générés sont dans `generated/`.
+
 ## Comptes
 
 | Utilisateur | Mot de passe | Rôle |

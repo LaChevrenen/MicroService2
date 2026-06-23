@@ -1,0 +1,165 @@
+openapi: 3.0.3
+info:
+  title: FlightBook API
+  description: API REST de réservation de vols, sécurisée par Keycloak (Bearer JWT)
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:8080/api
+    description: Serveur local
+
+security:
+  - bearerAuth: []
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Vol:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        compagnie:
+          type: string
+          example: Air France
+        numero:
+          type: string
+          example: AF1234
+        place:
+          type: string
+          example: 12A
+        prix:
+          type: number
+          format: double
+          example: 189.99
+        date:
+          type: string
+          format: date
+          example: "2026-07-15"
+
+    Reservation:
+      type: object
+      properties:
+        reference:
+          type: string
+          example: RES-A1B2C3D4
+        volId:
+          type: integer
+          example: 1
+        compagnie:
+          type: string
+          example: Air France
+        numero:
+          type: string
+          example: AF1234
+        statut:
+          type: string
+          example: CONFIRMÉE
+
+paths:
+  /vols:
+    get:
+      summary: Liste tous les vols disponibles
+      operationId: getVols
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Vol'
+        '403':
+          description: Token manquant ou invalide
+
+  /vols/{id}:
+    get:
+      summary: Détail d'un vol
+      operationId: getVolById
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Vol'
+        '403':
+          description: Token manquant ou invalide
+        '404':
+          description: Vol non trouvé
+
+  /compagnies:
+    get:
+      summary: Liste des compagnies aériennes
+      operationId: getCompagnies
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+                example: ["Air France", "EasyJet", "KLM", "Lufthansa"]
+        '403':
+          description: Token manquant ou invalide
+
+  /compagnies/{nom}/vols:
+    get:
+      summary: Vols d'une compagnie spécifique
+      operationId: getVolsByCompagnie
+      parameters:
+        - name: nom
+          in: path
+          required: true
+          schema:
+            type: string
+          example: Air France
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Vol'
+        '403':
+          description: Token manquant ou invalide
+
+  /reservations:
+    post:
+      summary: Réserver un vol
+      operationId: createReservation
+      parameters:
+        - name: volId
+          in: query
+          required: true
+          schema:
+            type: integer
+          example: 1
+      responses:
+        '200':
+          description: Réservation confirmée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Reservation'
+        '403':
+          description: Token manquant ou invalide
+        '404':
+          description: Vol non trouvé
