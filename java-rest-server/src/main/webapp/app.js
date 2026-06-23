@@ -183,4 +183,4 @@ window.chargerTousLesVols = chargerTousLesVols;
 window.filtrerParCompagnie = filtrerParCompagnie;
 window.voirDetail = voirDetail;
 window.reserver = reserver;
-window.keycloakLogout = () => keycloak.logout();
+window.keycloakLogout = () => keycloak.logout({ redirectUri: window.location.origin + '/' });
