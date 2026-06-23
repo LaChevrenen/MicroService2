@@ -179,7 +179,7 @@ Résultat observé : CPU 2% → 501% → scale up **2 → 4 replicas** en ~30s. 
 
 ## Comptes
 
-| | Mot de passe | |
-|--|--|--|
+| Utilisateur | Mot de passe | Rôle |
+|-------------|--------------|------|
 | testuser | testpass | utilisateur |
 | admin | admin | admin Keycloak (http://localhost:8180) |
