@@ -1,27 +1,40 @@
-// ─── Init ─────────────────────────────────────────────────────────────────────
-window.addEventListener('load', async () => {
-    chargerProfil();     // OAuth : tente d'afficher le profil Google
-    chargerCompagnies(); // Route 3 : alimente le filtre
+// ─── Keycloak ─────────────────────────────────────────────────────────────────
+const keycloak = new Keycloak('keycloak.json');
+
+window.addEventListener('load', () => {
+    keycloak.init({ onLoad: 'login-required' })
+        .then(authenticated => {
+            if (!authenticated) return;
+            afficherProfil();
+            chargerCompagnies();
+        })
+        .catch(() => {
+            document.getElementById('container').innerHTML =
+                '<p class="message error">Impossible de contacter Keycloak (http://localhost:8180).</p>';
+        });
 });
 
-// ─── OAuth : affiche le profil si connecté, sinon bouton login ────────────────
-async function chargerProfil() {
-    try {
-        const res = await fetch('api/profile');
-        if (!res.ok) return; // non connecté, le bouton login reste affiché
-        const p = await res.json();
-        document.getElementById('userZone').innerHTML =
-            '<div class="user-info">' +
-            (p.picture ? '<img src="' + p.picture + '" alt="avatar">' : '') +
-            '<span>Bonjour, ' + (p.name || p.email) + '</span>' +
-            '</div>';
-    } catch (_) {}
+// ─── Profil depuis le JWT Keycloak ────────────────────────────────────────────
+function afficherProfil() {
+    const p = keycloak.tokenParsed;
+    document.getElementById('userZone').innerHTML =
+        '<div class="user-info">' +
+        '<span>Bonjour, ' + (p.name || p.preferred_username) + '</span>' +
+        '<button class="btn-login" onclick="keycloak.logout()">Déconnexion</button>' +
+        '</div>';
+}
+
+// ─── fetch avec token Bearer (rafraîchi automatiquement) ──────────────────────
+async function authFetch(url, options = {}) {
+    try { await keycloak.updateToken(30); } catch (_) { keycloak.login(); return; }
+    options.headers = { ...(options.headers || {}), Authorization: 'Bearer ' + keycloak.token };
+    return fetch(url, options);
 }
 
 // ─── Route 3 : charge les compagnies pour le filtre ───────────────────────────
 async function chargerCompagnies() {
     try {
-        const res = await fetch('api/compagnies');
+        const res = await authFetch('api/compagnies');
         if (!res.ok) throw new Error();
         const compagnies = await res.json();
         const sel = document.getElementById('filtreCompagnie');
@@ -40,7 +53,7 @@ async function chargerTousLesVols() {
     document.getElementById('filtreCompagnie').value = '';
     setStatus('Chargement…');
     try {
-        const res = await fetch('api/vols');
+        const res = await authFetch('api/vols');
         if (!res.ok) throw new Error('HTTP ' + res.status);
         const vols = await res.json();
         afficherVols(vols);
@@ -50,13 +63,13 @@ async function chargerTousLesVols() {
     }
 }
 
-// ─── Route 4 : GET /api/compagnies/{nom}/vols ────────────────────────────────
+// ─── Route 4 : GET /api/compagnies/{nom}/vols ─────────────────────────────────
 async function filtrerParCompagnie() {
     const nom = document.getElementById('filtreCompagnie').value;
     if (!nom) { chargerTousLesVols(); return; }
     setStatus('Chargement…');
     try {
-        const res = await fetch('api/compagnies/' + encodeURIComponent(nom) + '/vols');
+        const res = await authFetch('api/compagnies/' + encodeURIComponent(nom) + '/vols');
         if (!res.ok) throw new Error('HTTP ' + res.status);
         const vols = await res.json();
         afficherVols(vols);
@@ -76,7 +89,7 @@ async function voirDetail(id) {
     panel.textContent = 'Chargement…';
     panel.classList.add('open');
     try {
-        const res = await fetch('api/vols/' + id);
+        const res = await authFetch('api/vols/' + id);
         if (!res.ok) throw new Error('HTTP ' + res.status);
         const v = await res.json();
         panel.innerHTML =
@@ -94,7 +107,7 @@ async function voirDetail(id) {
 // ─── Route 5 : POST /api/reservations?volId={id} ─────────────────────────────
 async function reserver(id) {
     try {
-        const res = await fetch('api/reservations?volId=' + id, { method: 'POST' });
+        const res = await authFetch('api/reservations?volId=' + id, { method: 'POST' });
         if (!res.ok) throw new Error('HTTP ' + res.status);
         const resa = await res.json();
         afficherToast('Réservation confirmée !\nRéf. ' + resa.reference + ' — ' + resa.compagnie + ' ' + resa.numero);
