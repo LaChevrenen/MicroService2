@@ -6,3 +6,6 @@ target/
 **/resources/oauth.properties
 .vscode/
 generated/
+*.tar
+*.tar.gz
+crane
