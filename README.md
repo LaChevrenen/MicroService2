@@ -95,6 +95,21 @@ sudo firewall-cmd --reload
 kubectl rollout restart deployment/traefik -n kube-system
 ```
 
+**Windows (Docker Desktop) — `docker compose push` échoue en HTTPS** — Docker Desktop ignore `insecure-registries` pour les pushs et tente HTTPS même sur une registry HTTP. Contournement via `crane` :
+```bash
+curl -LO "https://github.com/google/go-containerregistry/releases/latest/download/go-containerregistry_Linux_x86_64.tar.gz"
+tar -xzf go-containerregistry_Linux_x86_64.tar.gz crane
+docker save registry.infres.fr/flightbook:latest -o flightbook.tar
+./crane push --insecure flightbook.tar registry.infres.fr/flightbook:latest
+```
+
+**Windows (WSL) — le terminal se ferme après `systemctl restart k3s`** — Normal, k3s redémarre WSL. Rouvrir un terminal et relancer `sudo systemctl start k3s` + `export KUBECONFIG`.
+
+**Windows — `registry.infres.fr` non résolu par Docker Desktop** — Ajouter l'IP WSL dans le fichier hosts Windows (PowerShell admin) :
+```powershell
+Add-Content -Path "C:\Windows\System32\drivers\etc\hosts" -Value "$(wsl hostname -I) registry.infres.fr"
+```
+
 ---
 
 ### 1. Installer k3s
