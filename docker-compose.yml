@@ -9,6 +9,7 @@ services:
       KC_BOOTSTRAP_ADMIN_PASSWORD: admin
     volumes:
       - ./keycloak-realm-export.json:/opt/keycloak/data/import/flightbook-realm.json
+      - keycloak_data:/opt/keycloak/data/h2
     command: start-dev --import-realm
 
   flightbook:
@@ -17,9 +18,10 @@ services:
     ports:
       - "8080:8080"
     environment:
-      # Depuis le container, Keycloak est joignable via le nom du service Docker
       KEYCLOAK_JWKS_URL: http://keycloak:8080/realms/flightbook/protocol/openid-connect/certs
-      # L'issuer dans le JWT est toujours celui vu par le navigateur (localhost:8180)
       KEYCLOAK_ISSUER: http://localhost:8180/realms/flightbook
     depends_on:
       - keycloak
+
+volumes:
+  keycloak_data:
